@@ -1,2 +1,5 @@
 # Ignore all .doc files
 *.doc
+
+# Ignore all .pages files
+*.pages
