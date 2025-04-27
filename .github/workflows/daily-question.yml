@@ -1,0 +1,30 @@
+# .github/workflows/daily-question.yml
+
+name: Daily Question to Telegram
+
+on:
+  schedule:
+    - cron: '0 23 * * *' # 9AM Sydney time is 23:00 UTC (you can adjust if needed)
+  workflow_dispatch: # Allow manual trigger too
+
+jobs:
+  send-question:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: pip install requests
+
+    - name: Run send_question.py
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: python send_question.py
