@@ -49,3 +49,4 @@ if __name__ == "__main__":
         save_last_index((index + 1) % len(questions))
     else:
         print("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID environment variables.")
+        
