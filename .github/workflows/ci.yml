@@ -1,4 +1,4 @@
-name: CI – Build & Lint
+name: CI – Build & Push to GHCR
 
 on:
   push:
@@ -10,15 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # 1 ▸ Check out code
     - uses: actions/checkout@v4
 
+    # 2 ▸ Buildx for multi-arch and cache
     - uses: docker/setup-buildx-action@v3
 
-    # 🚀 Log in **only** when the secret is present (avoids failures on forks)
+    # 3 ▸ Log in to GitHub Container Registry
     - name: Login to GHCR
-      if: secrets.CR_PAT != ''
-      run: echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      id: login
+      env:
+        CR_PAT: ${{ secrets.CR_PAT }}          # safe to expose as env
+      run: |
+        if [ -n "$CR_PAT" ]; then
+          echo "$CR_PAT" | docker login ghcr.io \
+            -u "${{ github.actor }}" --password-stdin
+          echo "logged=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "No CR_PAT secret – build will run but image won't be pushed."
+        fi
 
+    # 4 ▸ Generate image tags & labels
     - uses: docker/metadata-action@v5
       id: meta
       with:
@@ -26,13 +38,14 @@ jobs:
         tags: |
           type=sha
 
+    # 5 ▸ Build (and push only if login successful)
     - uses: docker/build-push-action@v5
       with:
         context: .
-        push: ${{ secrets.CR_PAT != '' }}
+        push: ${{ steps.login.outputs.logged == 'true' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
 
-    # Optional – run a quick sanity check
-    - name: Smoke-test image
+    # 6 ▸ Optional smoke test
+    - name: Smoke-test container
       run: docker run --rm ${{ steps.meta.outputs.tags }} --help || true
