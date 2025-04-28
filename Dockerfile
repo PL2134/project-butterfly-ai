@@ -16,6 +16,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Links my container image to my GitHub repo automatically!
+LABEL org.opencontainers.image.source=https://github.com/PL2134/project-butterfly-ai
+
 # Copy your project files
 COPY . .
 
