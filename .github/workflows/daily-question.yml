@@ -1,15 +1,17 @@
 # .github/workflows/daily-question.yml
-
 name: Daily Question to Telegram
 
 on:
   schedule:
-    - cron: '0 23 * * *' # 9AM Sydney time is 23:00 UTC (you can adjust if needed)
-  workflow_dispatch: # Allow manual trigger too
+    - cron: '0 23 * * *'        # 09:00 AET = 23:00 UTC
+  workflow_dispatch:            # allow manual triggers too
 
 jobs:
   send-question:
     runs-on: ubuntu-latest
+    # give the GITHUB_TOKEN permission to push the updated file
+    permissions:
+      contents: write           # To update index.txt
 
     steps:
     - name: Checkout code
@@ -26,5 +28,15 @@ jobs:
     - name: Run send_question.py
       env:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_CHAT_ID:  ${{ secrets.TELEGRAM_CHAT_ID }}
       run: python send_question.py
+
+    # The new index is committed
+    - name: Save updated index
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add index.txt
+        # guard against “nothing to commit” when the file has not changed
+        git diff --staged --quiet || git commit -m "Update index.txt to next question"
+        git push
