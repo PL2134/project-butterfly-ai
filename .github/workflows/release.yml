@@ -1,0 +1,49 @@
+name: Release – Build, Push, Create GH Release
+
+on:
+  push:
+    tags: [ 'v*' ]   # v1.0.0, v0.3.1-beta etc.
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with: { fetch-depth: 0 }
+
+    - uses: docker/setup-buildx-action@v3
+
+    - name: Login to GHCR
+      run: echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+    - uses: docker/metadata-action@v5
+      id: meta
+      with:
+        images: ghcr.io/${{ github.repository }}
+        tags: |
+          type=ref,event=tag
+          type=raw,value=latest
+
+    - uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+    # --------  Changelog and GitHub Release  --------
+    - name: Generate changelog
+      id: changelog
+      run: |
+        PREV=$(git describe --tags --abbrev=0 @^ 2>/dev/null || echo "")
+        echo "## Changes\n" > BODY.md
+        git log --pretty=format:'- %s (%h)' $PREV..@ >> BODY.md
+
+    - uses: softprops/action-gh-release@v2
+      with:
+        body_path: BODY.md

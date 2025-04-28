@@ -1,0 +1,38 @@
+name: CI – Build & Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: docker/setup-buildx-action@v3
+
+    # 🚀 Log in **only** when the secret is present (avoids failures on forks)
+    - name: Login to GHCR
+      if: secrets.CR_PAT != ''
+      run: echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+    - uses: docker/metadata-action@v5
+      id: meta
+      with:
+        images: ghcr.io/${{ github.repository }}
+        tags: |
+          type=sha
+
+    - uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: ${{ secrets.CR_PAT != '' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+    # Optional – run a quick sanity check
+    - name: Smoke-test image
+      run: docker run --rm ${{ steps.meta.outputs.tags }} --help || true
