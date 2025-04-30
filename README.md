@@ -20,11 +20,13 @@ Every day, the bot sends a motivational question via Telegram to encourage refle
 |:---|:---|
 | Programming Language | Python 3.11 |
 | API Integration | Telegram Bot API |
-| Automation | GitHub Actions (cron jobs for scheduling) |
+| Automation | GitHub Actions (cron jobs + push-triggered builds) |
 | Secrets Management | GitHub Actions Secrets |
 | Software Design | Modular architecture (separating logic and data) |
-| Deployment Strategy | Serverless, event-driven scheduling (no dedicated server needed) |
-| Future Expansion | FastAPI backend, PostgreSQL database, OpenAI/Hugging Face API integrations |
+| Containerization | Docker + GitHub Container Registry (GHCR) |
+| Deployment Strategy | Serverless, event-driven scheduling |
+| Versioning | Semantic Versioning: `v1.1.3` + test builds as `test-v1.1.3.1` |
+| Future Expansion | FastAPI backend, PostgreSQL database, OpenAI/Hugging Face APIs |
 
 ---
 
@@ -48,12 +50,40 @@ This project was intentionally built through **progressive iterations**, simulat
    - Switch from random questions to **rotating structured questions**
    - Build a daily learning and habit stack aligned with career growth
 
-5. **Planned Phase 4 and Beyond**
+5. **Phase 4 - Containerized & Versioned CI/CD**
+   - Auto-publish production builds to GHCR as `vX.Y.Z`
+   - Auto-publish dev/test builds as `test-vX.Y.Z.N` for traceability
+   - Enable manual and push-based triggers for full control
+
+6. **Planned Phase 5 and Beyond**
    - Record user answers and analyze growth patterns
    - Introduce lightweight database storage (PostgreSQL or Supabase)
-   - Add NLP features for dynamic, personalized coaching (via OpenAI or Hugging Face)
+   - Add NLP features for dynamic, personalized coaching
    - Deploy a backend API (FastAPI) for future expansion
-   - Containerize with Docker for clean deployments
+
+---
+
+## 📦 Docker Image Versions on GHCR
+
+| Type | Tag Pattern | Example Pull |
+|------|-------------|---------------|
+| 🚀 Production | `vX.Y.Z` | `docker pull ghcr.io/pl2134/project-butterfly-ai:v1.1.3` |
+| 🧪 Dev Test | `test-vX.Y.Z.N` | `docker pull ghcr.io/pl2134/project-butterfly-ai:test-v1.1.3.2` |
+
+Pull the latest images:
+
+```bash
+# Latest release version
+docker pull ghcr.io/pl2134/project-butterfly-ai:latest
+
+# Latest test version (after v1.1.3)
+docker pull ghcr.io/pl2134/project-butterfly-ai:test-v1.1.3.2
+```
+
+Badges:
+
+[![GHCR Release](https://img.shields.io/badge/GHCR-v1.x.x-blue?logo=docker)](https://github.com/users/PL2134/packages/container/project-butterfly-ai)
+[![GHCR Dev](https://img.shields.io/badge/GHCR-test--v1.x.x.x-yellow?logo=docker)](https://github.com/users/PL2134/packages/container/project-butterfly-ai)
 
 ---
 
@@ -76,7 +106,8 @@ Project Butterfly AI is more than just a side project — it is **a live demonst
    - `TELEGRAM_BOT_TOKEN`
    - `TELEGRAM_CHAT_ID`
 3. Push your Python script and GitHub Action workflow
-4. Watch as your daily coaching begins — automatically!
+4. Enable GitHub Packages permissions for GHCR pushes
+5. Watch as your daily coaching begins — automatically!
 
 ---
 
