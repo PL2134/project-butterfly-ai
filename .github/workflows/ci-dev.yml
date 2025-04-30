@@ -2,12 +2,10 @@
 name: CI – Auto-Version & Push Dev Image to GHCR
 
 on:
-    push:
-      branches:
-        - dev
-    pull_request:
-      branches:
-        - dev
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
 
 jobs:
   version-and-build-dev:
@@ -21,21 +19,23 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Get latest dev tag
+    - name: Get latest version across prod and test tags
       id: get_version
       run: |
-        latest=$(git tag -l 'test-v*' --sort=-v:refname | head -n1)
-        echo "Latest tag: $latest"
-        if [[ "$latest" == "" ]]; then
-          version="1.0.0"
-        else
-          ver=$(echo $latest | sed 's/test-v//')
-          IFS='.' read -r major minor patch <<< "$ver"
-          patch=$((patch+1))
-          version="${major}.${minor}.${patch}"
-        fi
-        echo "version=$version" >> $GITHUB_OUTPUT
-        echo "::notice title=Dev Docker Version::test-v$version"
+        all_tags=$(git tag -l 'v*' 'test-v*' --sort=-v:refname)
+        latest="0.0.0"
+        for tag in $all_tags; do
+          clean_tag=$(echo $tag | sed 's/^test-//' | sed 's/^v//')
+          if [ "$clean_tag" != "$latest" ]; then
+            latest=$clean_tag
+            break
+          fi
+        done
+        IFS='.' read -r major minor patch <<< "$latest"
+        patch=$((patch+1))
+        new_version="${major}.${minor}.${patch}"
+        echo "version=$new_version" >> $GITHUB_OUTPUT
+        echo "::notice title=Dev Docker Version::test-v$new_version"
 
     - name: Create dev tag
       run: |
