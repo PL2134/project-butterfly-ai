@@ -1,16 +1,48 @@
-name: CI – Build & Push Dev Image to GHCR
+# .github/workflows/ci-dev.yml – Auto-versioning for dev (test-vX.X.X)
+name: CI – Auto-Version & Push Dev Image to GHCR
 
 on:
-  push:
-    branches:
-      - dev
+    push:
+      branches:
+        - dev
+    pull_request:
+      branches:
+        - dev
 
 jobs:
-  build-dev:
+  version-and-build-dev:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get latest dev tag
+      id: get_version
+      run: |
+        latest=$(git tag -l 'test-v*' --sort=-v:refname | head -n1)
+        echo "Latest tag: $latest"
+        if [[ "$latest" == "" ]]; then
+          version="1.0.0"
+        else
+          ver=$(echo $latest | sed 's/test-v//')
+          IFS='.' read -r major minor patch <<< "$ver"
+          patch=$((patch+1))
+          version="${major}.${minor}.${patch}"
+        fi
+        echo "version=$version" >> $GITHUB_OUTPUT
+        echo "::notice title=Dev Docker Version::test-v$version"
+
+    - name: Create dev tag
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git tag test-v${{ steps.get_version.outputs.version }}
+        git push origin test-v${{ steps.get_version.outputs.version }}
 
     - uses: docker/setup-buildx-action@v3
 
@@ -19,7 +51,7 @@ jobs:
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        password: ${{ secrets.CR_PAT }}
 
     - name: Metadata for GHCR Dev
       id: meta
@@ -27,8 +59,7 @@ jobs:
       with:
         images: ghcr.io/${{ github.repository }}
         tags: |
-          type=raw,value=latest-dev
-          type=sha
+          type=raw,value=test-v${{ steps.get_version.outputs.version }}
         labels: |
           org.opencontainers.image.source=https://github.com/${{ github.repository }}
           org.opencontainers.image.description="Project Butterfly AI test container"
