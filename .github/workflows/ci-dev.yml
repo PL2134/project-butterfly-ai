@@ -1,4 +1,4 @@
-# .github/workflows/ci-dev.yml – Auto-versioning for dev (test-vX.X.X)
+# .github/workflows/ci-dev.yml – Dev versioning with build suffix: test-v<prod-version>.<build#>
 name: CI – Auto-Version & Push Dev Image to GHCR
 
 on:
@@ -19,30 +19,32 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Get latest version across prod and test tags
+    - name: Determine next test version based on latest prod tag
       id: get_version
       run: |
-        all_tags=$(git tag -l 'v*' 'test-v*' --sort=-v:refname)
-        latest="0.0.0"
-        for tag in $all_tags; do
-          clean_tag=$(echo $tag | sed 's/^test-//' | sed 's/^v//')
-          if [ "$clean_tag" != "$latest" ]; then
-            latest=$clean_tag
-            break
-          fi
-        done
-        IFS='.' read -r major minor patch <<< "$latest"
-        patch=$((patch+1))
-        new_version="${major}.${minor}.${patch}"
-        echo "version=$new_version" >> $GITHUB_OUTPUT
-        echo "::notice title=Dev Docker Version::test-v$new_version"
+        # Get latest production tag
+        prod_tag=$(git tag -l 'v*' --sort=-v:refname | head -n1)
+        base_ver=${prod_tag#v}  # strip the 'v'
+
+        # Count how many test builds exist for that prod version
+        existing=$(git tag -l "test-v${base_ver}.*")
+        if [ -z "$existing" ]; then
+          build_num=1
+        else
+          last=$(echo "$existing" | sed -E 's/test-v'"$base_ver"'\.//g' | sort -nr | head -n1)
+          build_num=$((last + 1))
+        fi
+
+        new_test_tag="test-v${base_ver}.${build_num}"
+        echo "::notice title=Dev Docker Version::$new_test_tag"
+        echo "version=$new_test_tag" >> $GITHUB_OUTPUT
 
     - name: Create dev tag
       run: |
         git config user.name github-actions
         git config user.email github-actions@github.com
-        git tag test-v${{ steps.get_version.outputs.version }}
-        git push origin test-v${{ steps.get_version.outputs.version }}
+        git tag ${{ steps.get_version.outputs.version }}
+        git push origin ${{ steps.get_version.outputs.version }}
 
     - uses: docker/setup-buildx-action@v3
 
@@ -59,10 +61,10 @@ jobs:
       with:
         images: ghcr.io/${{ github.repository }}
         tags: |
-          type=raw,value=test-v${{ steps.get_version.outputs.version }}
+          type=raw,value=${{ steps.get_version.outputs.version }}
         labels: |
           org.opencontainers.image.source=https://github.com/${{ github.repository }}
-          org.opencontainers.image.description="Project Butterfly AI test container"
+          org.opencontainers.image.description="Project Butterfly AI test container based on ${{ steps.get_version.outputs.version }}"
           org.opencontainers.image.licenses=MIT
 
     - name: Build & Push Dev Image
