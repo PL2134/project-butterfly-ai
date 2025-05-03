@@ -1,0 +1,19 @@
+### mcp_template.json
+{
+  "input": {
+    "user_id": "pauline",
+    "yesterday_answer": "I got stuck integrating CI/CD with Hugging Face Agents.",
+    "goal": "Become AI Engineer in 5 months",
+    "current_day": "Day 21"
+  },
+  "tools": [
+    {
+      "name": "daily_question_generator",
+      "arguments": {
+        "user_goal": "AI Engineer",
+        "context": "CI/CD integration difficulty",
+        "day_count": 21
+      }
+    }
+  ]
+}

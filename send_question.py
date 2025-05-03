@@ -1,32 +1,19 @@
 # send_question.py
 
+# 27/04/2024 v1.0 This script sends a daily reflective question to a Telegram bot.
+# 03/05/2025 v2.0 LLM added.
+
 import os
 import requests
+from datetime import datetime
 
-# Load environment variables
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+from generate_question import generate_question
+from memory_store import load_yesterday_answer
 
-# Load questions
-def load_questions(filename="questions.txt"):
-    with open(filename, "r", encoding="utf-8") as file:
-        questions = [line.strip() for line in file if line.strip()]
-    return questions
+# Environment variables
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# Load last sent index
-def load_last_index(filename="index.txt"):
-    if not os.path.exists(filename):
-        return 0
-    with open(filename, "r") as file:
-        index = int(file.read().strip())
-    return index
-
-# Save new index
-def save_last_index(index, filename="index.txt"):
-    with open(filename, "w") as file:
-        file.write(str(index))
-
-# Send message
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
@@ -34,19 +21,18 @@ def send_telegram_message(message):
         'text': message
     }
     response = requests.post(url, data=payload)
-    return response.json()
+    if not response.ok:
+        print("Failed to send message:", response.text)
 
 if __name__ == "__main__":
-    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
-        questions = load_questions()
-        index = load_last_index()
-        question = questions[index % len(questions)]  # wrap around if needed
+    # Dynamically calculate the day
+    START_DATE = datetime(2024, 12, 1)  # Change to your real Day 1
+    day_count = (datetime.today() - START_DATE).days + 1
 
-        result = send_telegram_message(question)
-        print(result)
+    # Load memory + generate a question
+    yesterday_answer = load_yesterday_answer()
+    question = generate_question(yesterday_answer, day_count)
 
-        # Save the next index
-        save_last_index((index + 1) % len(questions))
-    else:
-        print("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID environment variables.")
-        
+    # Send to Telegram
+    message = f"🦋 Day {day_count} — Your Reflective Question:\n\n{question}"
+    send_telegram_message(message)
